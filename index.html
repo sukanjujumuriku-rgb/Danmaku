@@ -2,9 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>弾幕ゲーム</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Danmaku</title>
 <style>
-body{
+html,body{
     margin:0;
     overflow:hidden;
     background:#000;
@@ -15,94 +16,105 @@ canvas{
 </style>
 </head>
 <body>
-
 <canvas id="game"></canvas>
 
 <script>
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
 }
 resize();
-window.addEventListener("resize",resize);
+addEventListener("resize",resize);
 
-const keys = {};
-const bullets = [];
+const keys={};
+const bullets=[];
 
-let frame = 0;
+let frame=0;
+let gameOver=false;
 
-const player = {
-    x: canvas.width/2,
-    y: canvas.height-120,
+const player={
+    x:canvas.width/2,
+    y:canvas.height-120,
+    radius:4,
     speed:5,
-    radius:4
+    slowSpeed:2
 };
 
-const enemy = {
-    x: canvas.width/2,
+const enemy={
+    x:canvas.width/2,
     y:120,
-    hp:1000,
-    maxHp:1000
+    hp:9999,
+    maxHp:9999
 };
 
 addEventListener("keydown",e=>{
-    keys[e.key.toLowerCase()] = true;
+    keys[e.key.toLowerCase()]=true;
 });
 
 addEventListener("keyup",e=>{
-    keys[e.key.toLowerCase()] = false;
+    keys[e.key.toLowerCase()]=false;
 });
 
 class Bullet{
 
     constructor(x,y,vx,vy,type="normal"){
-
         this.x=x;
         this.y=y;
-
         this.vx=vx;
         this.vy=vy;
-
         this.type=type;
 
-        this.radius=8;
-
         this.life=0;
-
         this.exploded=false;
+
+        this.bounceCount=0;
+
+        this.radius=
+            type==="spiral" ? 4 :
+            type==="flower" ? 6 :
+            8;
     }
 
     update(){
 
         this.life++;
 
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x+=this.vx;
+        this.y+=this.vy;
 
         if(this.type==="bounce"){
 
-            if(this.x < this.radius){
+            let bounced=false;
+
+            if(this.x<this.radius){
                 this.x=this.radius;
                 this.vx*=-1;
+                bounced=true;
             }
 
-            if(this.x > canvas.width-this.radius){
+            if(this.x>canvas.width-this.radius){
                 this.x=canvas.width-this.radius;
                 this.vx*=-1;
+                bounced=true;
             }
 
-            if(this.y < this.radius){
+            if(this.y<this.radius){
                 this.y=this.radius;
                 this.vy*=-1;
+                bounced=true;
             }
 
-            if(this.y > canvas.height-this.radius){
+            if(this.y>canvas.height-this.radius){
                 this.y=canvas.height-this.radius;
                 this.vy*=-1;
+                bounced=true;
+            }
+
+            if(bounced){
+                this.bounceCount++;
             }
         }
 
@@ -111,23 +123,40 @@ class Bullet{
             this.life>60 &&
             !this.exploded
         ){
-
             this.exploded=true;
 
             for(let i=0;i<12;i++){
 
-                const angle=(Math.PI*2/12)*i;
+                const a=Math.PI*2/12*i;
 
                 bullets.push(
                     new Bullet(
                         this.x,
                         this.y,
-                        Math.cos(angle)*4,
-                        Math.sin(angle)*4
+                        Math.cos(a)*4,
+                        Math.sin(a)*4
                     )
                 );
             }
         }
+    }
+
+    remove(){
+
+        if(
+            this.type==="bounce" &&
+            this.bounceCount>=3
+        ){
+            return true;
+        }
+
+        return(
+            this.life>900 ||
+            this.x<-150 ||
+            this.x>canvas.width+150 ||
+            this.y<-150 ||
+            this.y>canvas.height+150
+        );
     }
 
     draw(){
@@ -140,6 +169,12 @@ class Bullet{
         if(this.type==="bounce")
             color="#44ff88";
 
+        if(this.type==="flower")
+            color="#ff66cc";
+
+        if(this.type==="spiral")
+            color="#cc88ff";
+
         ctx.beginPath();
         ctx.arc(
             this.x,
@@ -150,20 +185,6 @@ class Bullet{
         );
         ctx.fillStyle=color;
         ctx.fill();
-    }
-
-    remove(){
-
-        if(this.type==="bounce")
-            return false;
-
-        return(
-            this.x<-100 ||
-            this.x>canvas.width+100 ||
-            this.y<-100 ||
-            this.y>canvas.height+100 ||
-            this.life>600
-        );
     }
 }
 
@@ -180,7 +201,9 @@ function aimedVector(speed){
     };
 }
 
-function pattern1(){
+/* ---------- 基本追尾5連 ---------- */
+
+function aimed5(){
 
     for(let i=0;i<5;i++){
 
@@ -197,12 +220,113 @@ function pattern1(){
                 )
             );
 
-        },i*150);
+        },i*120);
 
     }
 }
 
-function pattern2(){
+/* ---------- 追尾25連 ---------- */
+
+function aimed25(){
+
+    for(let i=0;i<25;i++){
+
+        setTimeout(()=>{
+
+            const v=aimedVector(6);
+
+            bullets.push(
+                new Bullet(
+                    enemy.x,
+                    enemy.y,
+                    v.vx,
+                    v.vy
+                )
+            );
+
+        },i*80);
+
+    }
+}
+
+/* ---------- 円形ばら撒き ---------- */
+
+function circleSpread(){
+
+    for(let i=0;i<24;i++){
+
+        const a=Math.PI*2/24*i;
+
+        bullets.push(
+            new Bullet(
+                enemy.x,
+                enemy.y,
+                Math.cos(a)*3,
+                Math.sin(a)*3
+            )
+        );
+    }
+}
+
+/* ---------- 花びら ---------- */
+
+function flowerPattern(){
+
+    const rot=frame*0.03;
+
+    for(let i=0;i<48;i++){
+
+        const a=Math.PI*2/48*i;
+
+        const speed=
+            2+
+            Math.sin(a*4+rot)*1.5;
+
+        bullets.push(
+            new Bullet(
+                enemy.x,
+                enemy.y,
+                Math.cos(a+rot)*speed,
+                Math.sin(a+rot)*speed,
+                "flower"
+            )
+        );
+    }
+}
+
+/* ---------- 二重螺旋 ---------- */
+
+function spiralPattern(){
+
+    for(let i=0;i<180;i+=6){
+
+        const a=(i*Math.PI/180);
+
+        bullets.push(
+            new Bullet(
+                enemy.x,
+                enemy.y,
+                Math.cos(a)*3,
+                Math.sin(a)*3,
+                "spiral"
+            )
+        );
+
+        bullets.push(
+            new Bullet(
+                enemy.x,
+                enemy.y,
+                Math.cos(a+Math.PI)*3,
+                Math.sin(a+Math.PI)*3,
+                "spiral"
+            )
+        );
+    }
+}
+
+/* ---------- 分裂 ---------- */
+
+function explodePattern(){
 
     for(let i=0;i<3;i++){
 
@@ -225,27 +349,30 @@ function pattern2(){
     }
 }
 
-function pattern3(){
+/* ---------- 跳弾 ---------- */
+
+function bouncePattern(){
 
     for(let i=0;i<3;i++){
 
         setTimeout(()=>{
 
-            const center=Math.atan2(
-                player.y-enemy.y,
-                player.x-enemy.x
-            );
+            const center=
+                Math.atan2(
+                    player.y-enemy.y,
+                    player.x-enemy.x
+                );
 
             for(let j=-3;j<=2;j++){
 
-                const angle=center+j*0.22;
+                const a=center+j*0.22;
 
                 bullets.push(
                     new Bullet(
                         enemy.x,
                         enemy.y,
-                        Math.cos(angle)*5,
-                        Math.sin(angle)*5,
+                        Math.cos(a)*5,
+                        Math.sin(a)*5,
                         "bounce"
                     )
                 );
@@ -256,31 +383,51 @@ function pattern3(){
     }
 }
 
-function enemyAttack(){
+/* ---------- 攻撃ローテ ---------- */
 
-    if(frame%360===0)
-        pattern1();
+function attackControl(){
 
-    if(frame%720===0)
-        pattern2();
+    const t=frame%2400;
 
-    if(frame%1080===0)
-        pattern3();
+    if(t===0){
+        aimed5();
+        circleSpread();
+    }
+
+    if(t===400){
+        aimed5();
+        flowerPattern();
+    }
+
+    if(t===800){
+        aimed5();
+        spiralPattern();
+    }
+
+    if(t===1200){
+        explodePattern();
+    }
+
+    if(t===1600){
+        bouncePattern();
+    }
+
+    if(t===2000){
+        aimed25();
+    }
 }
 
 function updatePlayer(){
 
-    if(keys["a"])
-        player.x-=player.speed;
+    const speed=
+        keys["shift"]
+        ? player.slowSpeed
+        : player.speed;
 
-    if(keys["d"])
-        player.x+=player.speed;
-
-    if(keys["w"])
-        player.y-=player.speed;
-
-    if(keys["s"])
-        player.y+=player.speed;
+    if(keys["w"]) player.y-=speed;
+    if(keys["s"]) player.y+=speed;
+    if(keys["a"]) player.x-=speed;
+    if(keys["d"]) player.x+=speed;
 
     player.x=Math.max(
         20,
@@ -295,8 +442,8 @@ function updatePlayer(){
 
 function updateBullets(){
 
-    for(const bullet of bullets){
-        bullet.update();
+    for(const b of bullets){
+        b.update();
     }
 
     for(let i=bullets.length-1;i>=0;i--){
@@ -307,15 +454,23 @@ function updateBullets(){
     }
 }
 
-function drawBackground(){
+function checkHit(){
 
-    ctx.fillStyle="#000";
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
+    for(const b of bullets){
+
+        const dx=b.x-player.x;
+        const dy=b.y-player.y;
+
+        const dist=Math.hypot(dx,dy);
+
+        if(
+            dist <
+            b.radius +
+            player.radius
+        ){
+            gameOver=true;
+        }
+    }
 }
 
 function drawEnemy(){
@@ -331,41 +486,19 @@ function drawEnemy(){
     ctx.fillStyle="#ff4444";
     ctx.fill();
 
-    ctx.strokeStyle="#fff";
-    ctx.lineWidth=3;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(
-        enemy.x-10,
-        enemy.y-5,
-        4,
-        0,
-        Math.PI*2
-    );
-    ctx.arc(
-        enemy.x+10,
-        enemy.y-5,
-        4,
-        0,
-        Math.PI*2
-    );
-    ctx.fillStyle="#fff";
-    ctx.fill();
-
     ctx.fillStyle="#333";
     ctx.fillRect(
-        enemy.x-60,
-        enemy.y-55,
-        120,
+        enemy.x-80,
+        enemy.y-60,
+        160,
         10
     );
 
-    ctx.fillStyle="#00ff00";
+    ctx.fillStyle="#00ff66";
     ctx.fillRect(
-        enemy.x-60,
-        enemy.y-55,
-        120*(enemy.hp/enemy.maxHp),
+        enemy.x-80,
+        enemy.y-60,
+        160,
         10
     );
 }
@@ -376,16 +509,12 @@ function drawPlayer(){
     ctx.arc(
         player.x,
         player.y,
-        20,
+        18,
         0,
         Math.PI*2
     );
     ctx.fillStyle="#4488ff";
     ctx.fill();
-
-    ctx.strokeStyle="#fff";
-    ctx.lineWidth=2;
-    ctx.stroke();
 
     ctx.beginPath();
     ctx.arc(
@@ -397,59 +526,91 @@ function drawPlayer(){
     );
     ctx.fillStyle="#fff";
     ctx.fill();
-}
 
-function drawBullets(){
-
-    for(const bullet of bullets){
-        bullet.draw();
+    if(keys["shift"]){
+        ctx.beginPath();
+        ctx.arc(
+            player.x,
+            player.y,
+            25,
+            0,
+            Math.PI*2
+        );
+        ctx.strokeStyle="#fff";
+        ctx.stroke();
     }
 }
 
-function drawInfo(){
+function draw(){
 
-    ctx.fillStyle="#fff";
-    ctx.font="18px sans-serif";
-
-    ctx.fillText(
-        "WASDで移動",
-        20,
-        30
+    ctx.fillStyle="#000";
+    ctx.fillRect(
+        0,0,
+        canvas.width,
+        canvas.height
     );
 
+    drawEnemy();
+
+    for(const b of bullets){
+        b.draw();
+    }
+
+    drawPlayer();
+
+    ctx.fillStyle="#fff";
+    ctx.font="16px sans-serif";
     ctx.fillText(
-        "弾数 : "+bullets.length,
-        20,
-        60
+        "WASD:移動  SHIFT:低速",
+        20,30
+    );
+}
+
+function drawGameOver(){
+
+    ctx.fillStyle="rgba(0,0,0,0.6)";
+    ctx.fillRect(
+        0,0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.fillStyle="#ff4444";
+    ctx.font="64px sans-serif";
+    ctx.textAlign="center";
+    ctx.fillText(
+        "GAME OVER",
+        canvas.width/2,
+        canvas.height/2
     );
 }
 
 function loop(){
 
-    frame++;
+    if(!gameOver){
 
-    updatePlayer();
+        frame++;
 
-    enemyAttack();
+        updatePlayer();
 
-    updateBullets();
+        attackControl();
 
-    drawBackground();
+        updateBullets();
 
-    drawEnemy();
+        checkHit();
 
-    drawBullets();
+        draw();
 
-    drawPlayer();
+    }else{
 
-    drawInfo();
+        draw();
+        drawGameOver();
+    }
 
     requestAnimationFrame(loop);
 }
 
 loop();
-
 </script>
-
 </body>
 </html>
