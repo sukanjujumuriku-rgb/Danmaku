@@ -367,32 +367,32 @@ function attackControl() {
         patternA();
     }
 
-    if (t === 500) {
+    if (t === 200) {
 
         patternB();
     }
 
-    if (t === 1000) {
+    if (t === 4000) {
 
         patternC();
     }
 
-    if (t === 1500) {
+    if (t === 800) {
 
         explodePattern();
     }
 
-    if (t === 2000) {
+    if (t === 1000) {
 
         bouncePattern();
     }
 
-    if (t === 2500) {
+    if (t === 1200) {
 
         aimed25();
     }
 
-    if (t === 3000) {
+    if (t === 1400) {
 
         sideWallPattern();
     }
