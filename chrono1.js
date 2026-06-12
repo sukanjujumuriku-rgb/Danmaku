@@ -1,4 +1,5 @@
 const chrono = {
+
     x: 400,
     y: 120,
 
@@ -8,11 +9,13 @@ const chrono = {
     maxHp: 500,
 
     currentSpell: 0,
-    spellTimer: 0,
-
     lastSpell: -1,
 
-    moveAngle: 0
+    spellTimer: 0,
+
+    moveAngle: 0,
+
+    futureShots: []
 };
 
 chooseChronoSpell();
@@ -25,7 +28,7 @@ function chooseChronoSpell(){
 
         next =
             Math.floor(
-                Math.random() * 5
+                Math.random()*5
             );
 
     }while(
@@ -34,7 +37,6 @@ function chooseChronoSpell(){
 
     chrono.lastSpell = next;
     chrono.currentSpell = next;
-
     chrono.spellTimer = 0;
 }
 
@@ -62,6 +64,8 @@ function updateChrono1(){
         chooseChronoSpell();
     }
 
+    updateFutureShots();
+
     switch(
         chrono.currentSpell
     ){
@@ -86,12 +90,27 @@ function updateChrono1(){
             afterImage();
             break;
     }
+
+    if(
+        chrono.hp <= 100
+    ){
+
+        currentBoss = "chrono2";
+
+        if(
+            typeof startChrono2
+            === "function"
+        ){
+            startChrono2();
+        }
+    }
 }
 
 function stopNeedle(){
 
     if(
-        chrono.spellTimer % 20 !== 0
+        chrono.spellTimer % 20
+        !== 0
     ) return;
 
     for(
@@ -101,144 +120,166 @@ function stopNeedle(){
     ){
 
         const a =
-            (Math.PI*2/8)*i;
+            Math.PI*2/8*i;
 
-        enemyBullets.push({
+        spawnEnemyBullet(
 
-            x:chrono.x,
-            y:chrono.y,
+            chrono.x,
+            chrono.y,
 
-            vx:
-                Math.cos(a)*2,
+            Math.cos(a)*2,
+            Math.sin(a)*2,
 
-            vy:
-                Math.sin(a)*2,
+            5,
 
-            radius:5,
-
-            damage:5,
-
-            age:0,
-
-            stopTime:60
-        });
+            {
+                stopTime:60
+            }
+        );
     }
 }
 
 function accelNeedle(){
 
     if(
-        chrono.spellTimer % 10 !== 0
+        chrono.spellTimer % 10
+        !== 0
     ) return;
 
     const a =
         Math.random()
-        * Math.PI * 2;
+        * Math.PI*2;
 
-    enemyBullets.push({
+    spawnEnemyBullet(
 
-        x:chrono.x,
-        y:chrono.y,
+        chrono.x,
+        chrono.y,
 
-        vx:
-            Math.cos(a),
+        Math.cos(a),
+        Math.sin(a),
 
-        vy:
-            Math.sin(a),
+        5,
 
-        radius:5,
-
-        damage:5,
-
-        age:0,
-
-        accel:0.03
-    });
+        {
+            accel:0.03
+        }
+    );
 }
 
 function reverseClock(){
 
     if(
-        chrono.spellTimer % 15 !== 0
+        chrono.spellTimer % 15
+        !== 0
     ) return;
 
     const a =
         Math.random()
-        * Math.PI * 2;
+        * Math.PI*2;
 
-    enemyBullets.push({
+    spawnEnemyBullet(
 
-        x:chrono.x,
-        y:chrono.y,
+        chrono.x,
+        chrono.y,
 
-        vx:
-            Math.cos(a)*3,
+        Math.cos(a)*3,
+        Math.sin(a)*3,
 
-        vy:
-            Math.sin(a)*3,
+        5,
 
-        radius:5,
-
-        damage:5,
-
-        age:0,
-
-        reverseTime:90
-    });
+        {
+            reverseTime:90
+        }
+    );
 }
 
 function futureSight(){
 
     if(
-        chrono.spellTimer % 60 !== 0
+        chrono.spellTimer % 60
+        !== 0
     ) return;
 
-    const dx =
-        player.x -
-        chrono.x;
+    chrono.futureShots.push({
 
-    const dy =
-        player.y -
-        chrono.y;
+        timer:60,
 
-    const len =
-        Math.hypot(dx,dy);
+        x:player.x,
 
-    enemyBullets.push({
-
-        x:chrono.x,
-        y:chrono.y,
-
-        vx:
-            dx/len*5,
-
-        vy:
-            dy/len*5,
-
-        radius:6,
-
-        damage:10
+        y:player.y
     });
+}
+
+function updateFutureShots(){
+
+    for(
+        let i=
+        chrono.futureShots.length-1;
+        i>=0;
+        i--
+    ){
+
+        const shot =
+            chrono.futureShots[i];
+
+        shot.timer--;
+
+        if(
+            shot.timer <= 0
+        ){
+
+            const dx =
+                shot.x -
+                chrono.x;
+
+            const dy =
+                shot.y -
+                chrono.y;
+
+            const len =
+                Math.hypot(
+                    dx,
+                    dy
+                );
+
+            spawnEnemyBullet(
+
+                chrono.x,
+                chrono.y,
+
+                dx/len*5,
+                dy/len*5,
+
+                6
+            );
+
+            chrono.futureShots
+            .splice(i,1);
+        }
+    }
 }
 
 function afterImage(){
 
     if(
-        chrono.spellTimer % 45 !== 0
+        chrono.spellTimer % 45
+        !== 0
     ) return;
 
-    enemyBullets.push({
+    spawnEnemyBullet(
 
-        x:player.x,
-        y:player.y,
+        player.x,
+        player.y,
 
-        vx:0,
-        vy:0,
+        0,
+        0,
 
-        radius:15,
+        15,
 
-        damage:10
-    });
+        {
+            damage:10
+        }
+    );
 }
 
 function drawChrono1(){
@@ -249,9 +290,12 @@ function drawChrono1(){
     ctx.beginPath();
 
     ctx.arc(
+
         chrono.x,
         chrono.y,
+
         chrono.radius,
+
         0,
         Math.PI*2
     );
@@ -266,9 +310,12 @@ function drawChrono1(){
     ctx.beginPath();
 
     ctx.arc(
+
         chrono.x,
         chrono.y,
-        chrono.radius + 8,
+
+        chrono.radius+8,
+
         0,
         Math.PI*2
     );
@@ -276,7 +323,7 @@ function drawChrono1(){
     ctx.stroke();
 
     ctx.fillStyle =
-        "white";
+        "red";
 
     ctx.fillRect(
         250,
@@ -286,16 +333,19 @@ function drawChrono1(){
     );
 
     ctx.fillStyle =
-        "blue";
+        "cyan";
 
     ctx.fillRect(
+
         250,
         20,
+
         300 *
         (
             chrono.hp /
             chrono.maxHp
         ),
+
         20
     );
 
@@ -319,10 +369,12 @@ function drawChrono1(){
         "20px sans-serif";
 
     ctx.fillText(
+
         names[
             chrono.currentSpell
         ],
-        250,
-        70
+
+        240,
+        60
     );
 }
