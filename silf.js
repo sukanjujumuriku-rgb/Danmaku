@@ -190,6 +190,70 @@ function updateEnemyBullets() {
 
         const b = enemyBullets[i];
 
+        b.age = (b.age || 0) + 1;
+
+        // 停止秒針
+
+        if (
+            b.stopTime &&
+            b.age === b.stopTime
+        ) {
+
+            b.savedVx = b.vx;
+            b.savedVy = b.vy;
+
+            b.vx = 0;
+            b.vy = 0;
+        }
+
+        if (
+            b.stopTime &&
+            b.age === b.stopTime + 60
+        ) {
+
+            b.vx = b.savedVx;
+            b.vy = b.savedVy;
+        }
+
+        // 逆行時計
+
+        if (
+            b.reverseTime &&
+            b.age === b.reverseTime
+        ) {
+
+            b.vx *= -1;
+            b.vy *= -1;
+        }
+
+        // 加速秒針
+
+        if (b.accel) {
+
+            b.vx *= 1 + b.accel;
+            b.vy *= 1 + b.accel;
+        }
+
+        // 遅延警報
+
+        if (b.appearTime) {
+
+            b.hidden =
+                b.age < b.appearTime;
+        }
+
+        // 時計振子
+
+        if (b.swing) {
+
+            b.vx =
+                Math.sin(
+                    b.age * 0.1
+                ) * 3;
+        }
+
+        // 移動
+
         b.x += b.vx;
         b.y += b.vy;
 
@@ -200,15 +264,21 @@ function updateEnemyBullets() {
             b.y - player.y;
 
         const dist =
-            Math.sqrt(dx * dx + dy * dy);
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
 
         if (
+            !b.hidden &&
             dist <
-            player.radius + b.radius &&
+            player.radius +
+            b.radius &&
             player.invincible <= 0
         ) {
 
-            player.hp -= b.damage;
+            player.hp -=
+                b.damage || 5;
 
             player.invincible = 60;
 
@@ -218,10 +288,10 @@ function updateEnemyBullets() {
         }
 
         if (
-            b.x < -50 ||
-            b.x > canvas.width + 50 ||
-            b.y < -50 ||
-            b.y > canvas.height + 50
+            b.x < -100 ||
+            b.x > canvas.width + 100 ||
+            b.y < -100 ||
+            b.y > canvas.height + 100
         ) {
 
             enemyBullets.splice(i, 1);
@@ -281,12 +351,15 @@ function drawSilf() {
         60
     );
 }
-
 function drawEnemyBullets() {
 
-    ctx.fillStyle = "orange";
-
     enemyBullets.forEach(b => {
+
+        if (b.hidden) {
+            return;
+        }
+
+        ctx.fillStyle = "orange";
 
         ctx.beginPath();
 
