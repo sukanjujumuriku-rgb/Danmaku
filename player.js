@@ -1,3 +1,4 @@
+alert("player.js");
 const player = {
     x:400,
     y:500,
