@@ -72,7 +72,7 @@ function updatePlayer(){
 
             spawnPlayerBullet(5);
 
-            shotCooldown = 2;
+            shotCooldown = 1;
         }
     }
 
