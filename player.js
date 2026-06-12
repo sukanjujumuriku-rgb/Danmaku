@@ -6,7 +6,7 @@ const player = {
 
     radius:10,
 
-    hp:3,
+    hp:50,
 
     invincible:0
 };
