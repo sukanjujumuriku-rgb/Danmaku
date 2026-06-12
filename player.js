@@ -119,33 +119,62 @@ function updatePlayerBullets(){
 
         b.y -= b.speed;
 
-        const dx =
-            b.x - silf.x;
-
-        const dy =
-            b.y - silf.y;
-
-        const dist =
-            Math.sqrt(
-                dx*dx + dy*dy
-            );
+        let boss = null;
 
         if(
-            dist <
-            silf.radius +
-            b.radius
+            currentBoss === "silf"
         ){
 
-            silf.hp -= b.power;
+            boss = silf;
+        }
+        else if(
+            currentBoss === "chrono1" ||
+            currentBoss === "chrono2"
+        ){
 
-            playerBullets.splice(i,1);
-
-            continue;
+            boss = chrono;
         }
 
-        if(b.y < -20){
+        if(boss){
 
-            playerBullets.splice(i,1);
+            const dx =
+                b.x - boss.x;
+
+            const dy =
+                b.y - boss.y;
+
+            const dist =
+                Math.sqrt(
+                    dx*dx +
+                    dy*dy
+                );
+
+            if(
+                dist <
+                boss.radius +
+                b.radius
+            ){
+
+                boss.hp -=
+                    b.power;
+
+                playerBullets.splice(
+                    i,
+                    1
+                );
+
+                continue;
+            }
+        }
+
+        if(
+            b.y < -20
+        ){
+
+            playerBullets.splice(
+                i,
+                1
+            );
         }
     }
 }
