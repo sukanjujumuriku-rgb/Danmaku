@@ -70,7 +70,7 @@ function updatePlayer(){
 
         if(shotCooldown <= 0){
 
-            spawnPlayerBullet(5);
+            spawnPlayerBullet(2);
 
             shotCooldown = 10;
         }
