@@ -1,3 +1,4 @@
+alert("silf.js");
 const silf = {
 
     x:400,
