@@ -18,7 +18,6 @@ canvas{
     border:2px solid white;
 }
 </style>
-
 </head>
 <body>
 
@@ -32,11 +31,11 @@ const ctx = canvas.getContext("2d");
 const keys = {};
 
 document.addEventListener("keydown", e=>{
-    keys[e.code]=true;
+    keys[e.code] = true;
 });
 
 document.addEventListener("keyup", e=>{
-    keys[e.code]=false;
+    keys[e.code] = false;
 });
 
 const player = {
@@ -60,6 +59,7 @@ const bullets = [];
 const enemyBullets = [];
 
 let chargeStart = null;
+let shotCooldown = 0;
 
 function spawnPlayerBullet(power){
 
@@ -68,7 +68,7 @@ function spawnPlayerBullet(power){
         y:player.y,
         speed:8,
         power:power,
-        radius: power===10 ? 8 : 4
+        radius: power === 10 ? 8 : 4
     });
 }
 
@@ -79,26 +79,47 @@ function updatePlayer(){
     if(keys["KeyA"]) player.x -= player.speed;
     if(keys["KeyD"]) player.x += player.speed;
 
-    player.x = Math.max(0,Math.min(canvas.width,player.x));
-    player.y = Math.max(0,Math.min(canvas.height,player.y));
+    player.x = Math.max(0, Math.min(canvas.width, player.x));
+    player.y = Math.max(0, Math.min(canvas.height, player.y));
 
     if(player.invincible > 0){
         player.invincible--;
     }
 
-    if(keys["Space"] && chargeStart === null){
+    if(shotCooldown > 0){
+        shotCooldown--;
+    }
+
+    // 通常弾連射
+    if(keys["Space"] && !keys["KeyF"]){
+
+        if(shotCooldown <= 0){
+
+            spawnPlayerBullet(5);
+            shotCooldown = 10;
+        }
+    }
+
+    // チャージ開始
+    if(
+        keys["Space"] &&
+        keys["KeyF"] &&
+        chargeStart === null
+    ){
         chargeStart = performance.now();
     }
 
-    if(!keys["Space"] && chargeStart !== null){
+    // チャージ解除
+    if(
+        chargeStart !== null &&
+        (!keys["Space"] || !keys["KeyF"])
+    ){
 
         const held =
             (performance.now() - chargeStart) / 1000;
 
         if(held >= 1){
             spawnPlayerBullet(10);
-        }else{
-            spawnPlayerBullet(5);
         }
 
         chargeStart = null;
@@ -107,7 +128,7 @@ function updatePlayer(){
 
 function updateBullets(){
 
-    for(let i=bullets.length-1;i>=0;i--){
+    for(let i = bullets.length - 1; i >= 0; i--){
 
         const b = bullets[i];
 
@@ -167,7 +188,7 @@ function updateBoss(){
 
 function updateEnemyBullets(){
 
-    for(let i=enemyBullets.length-1;i>=0;i--){
+    for(let i = enemyBullets.length - 1; i >= 0; i--){
 
         const b = enemyBullets[i];
 
@@ -214,20 +235,32 @@ function drawPlayer(){
 
     if(
         player.invincible > 0 &&
-        Math.floor(player.invincible/5)%2===0
+        Math.floor(player.invincible / 5) % 2 === 0
     ){
         return;
     }
 
+    // 外側
     ctx.fillStyle = "cyan";
-
     ctx.beginPath();
     ctx.arc(
         player.x,
         player.y,
         player.radius,
         0,
-        Math.PI*2
+        Math.PI * 2
+    );
+    ctx.fill();
+
+    // 当たり判定
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(
+        player.x,
+        player.y,
+        3,
+        0,
+        Math.PI * 2
     );
     ctx.fill();
 }
@@ -242,7 +275,7 @@ function drawBoss(){
         boss.y,
         boss.radius,
         0,
-        Math.PI*2
+        Math.PI * 2
     );
     ctx.fill();
 
@@ -264,20 +297,19 @@ function drawBoss(){
 
 function drawBullets(){
 
-    ctx.fillStyle = "yellow";
-
     bullets.forEach(b=>{
 
-        ctx.beginPath();
+        ctx.fillStyle =
+            b.power === 10 ? "lime" : "yellow";
 
+        ctx.beginPath();
         ctx.arc(
             b.x,
             b.y,
             b.radius,
             0,
-            Math.PI*2
+            Math.PI * 2
         );
-
         ctx.fill();
     });
 }
@@ -289,15 +321,13 @@ function drawEnemyBullets(){
     enemyBullets.forEach(b=>{
 
         ctx.beginPath();
-
         ctx.arc(
             b.x,
             b.y,
             b.radius,
             0,
-            Math.PI*2
+            Math.PI * 2
         );
-
         ctx.fill();
     });
 }
@@ -307,7 +337,7 @@ function drawChargeBar(){
     if(chargeStart === null) return;
 
     const held = Math.min(
-        (performance.now() - chargeStart)/1000,
+        (performance.now() - chargeStart) / 1000,
         1
     );
 
@@ -321,15 +351,22 @@ function drawChargeBar(){
         200 * held,
         20
     );
+
+    ctx.fillStyle = "white";
+    ctx.font = "16px sans-serif";
+    ctx.fillText(
+        "CHARGE",
+        20,
+        550
+    );
 }
 
 function drawPlayerHP(){
 
     ctx.fillStyle = "white";
     ctx.font = "24px sans-serif";
-
     ctx.fillText(
-        "HP : " + player.hp,
+        "HP: " + player.hp,
         20,
         40
     );
@@ -339,10 +376,9 @@ function drawVictory(){
 
     ctx.fillStyle = "white";
     ctx.font = "48px sans-serif";
-
     ctx.fillText(
         "VICTORY",
-        290,
+        280,
         300
     );
 }
